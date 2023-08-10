@@ -47,8 +47,9 @@ class Duels(commands.Cog):
             guild.me: discord.PermissionOverwrite(read_messages=True, send_messages=True),
             challenger: discord.PermissionOverwrite(read_messages=True, send_messages=True),
             opponent: discord.PermissionOverwrite(read_messages=True, send_messages=True),
+            guild.get_role(SQUADRON_LEADER): discord.PermissionOverwrite(read_messages=True, send_messages=True),
             guild.get_role(UNIT_STAFF): discord.PermissionOverwrite(read_messages=True, send_messages=True),
-            **{dev: discord.PermissionOverwrite(read_messages=True, send_messages=True) for dev in DEVELOPERS}
+            guild.get_role(SNEK_LORD): discord.PermissionOverwrite(read_messages=True, send_messages=True),
         }
         channelName = f"{challenger.display_name} vs {opponent.display_name} - {datetime.now(timezone.utc).strftime('%Y-%m-%d @ %H:%M:%S')}"
         channel = await interaction.guild.create_text_channel(channelName, category=self.bot.get_channel(DUELS_CATEGORY), overwrites=overwrites)
@@ -99,12 +100,12 @@ class DuelView(discord.ui.View):
             scores[str(loser.id)] = 0
         
         # 1 point per win + 1 extra point per rank above
-        pointsWon = 1 + max(0, ((scores[str(loser.id)] - 1) // 5) - ((scores[str(winner.id)] - 1) // 5))
+        pointsWon = 1 + max(0, (max(0, scores[str(loser.id)] - 1) // 5) - (max(0, scores[str(winner.id)] - 1) // 5))
         
         winnerRank = RANKS_BY_SCORE[scores[str(winner.id)]]
         loserRank = RANKS_BY_SCORE[scores[str(loser.id)]]
         
-        scores[str(winner.id)] = min(max(scores[str(winner.id)] + pointsWon, 0), MAX_SCORE)
+        scores[str(winner.id)] = min(max(scores[str(winner.id)] + pointsWon, 0), 30)
         scores[str(loser.id)] = max(scores[str(loser.id)] - 1, 0)
         
         winnerNewRank = RANKS_BY_SCORE[scores[str(winner.id)]]
@@ -114,17 +115,17 @@ class DuelView(discord.ui.View):
             json.dump(scores, f, indent=4)
         
         if winnerNewRank == winnerRank == INITIATE:
-            await winner.add_roles(self.mainChannel.guild.get_role(RANKS[winnerNewRank]))
+            await winner.add_roles(self.mainChannel.guild.get_role(winnerNewRank))
         elif winnerNewRank != winnerRank:
-            await winner.remove_roles(self.mainChannel.guild.get_role(RANKS[winnerRank]))
-            await winner.add_roles(self.mainChannel.guild.get_role(RANKS[winnerNewRank]))
+            await winner.remove_roles(self.mainChannel.guild.get_role(winnerRank))
+            await winner.add_roles(self.mainChannel.guild.get_role(winnerNewRank))
             await self.mainChannel.send(f"{winner.mention} is now {winnerNewRank}!")
         
         if loserNewRank == loserRank == INITIATE:
-            await loser.add_roles(self.mainChannel.guild.get_role(RANKS[loserNewRank]))
+            await loser.add_roles(self.mainChannel.guild.get_role(loserNewRank))
         elif loserNewRank != loserRank:
-            await loser.remove_roles(self.mainChannel.guild.get_role(RANKS[loserRank]))
-            await loser.add_roles(self.mainChannel.guild.get_role(RANKS[loserNewRank]))
+            await loser.remove_roles(self.mainChannel.guild.get_role(loserRank))
+            await loser.add_roles(self.mainChannel.guild.get_role(loserNewRank))
             await self.mainChannel.send(f"{loser.mention} is now {loserNewRank}!")
         
         with open(DUELS_HISTORY_FILE) as f:
@@ -164,10 +165,10 @@ class DuelView(discord.ui.View):
             json.dump(scores, f, indent=4)
         
         if refuserNewRank == refuserRank == INITIATE:
-            await refuser.add_roles(self.mainChannel.guild.get_role(RANKS[refuserNewRank]))
+            await refuser.add_roles(self.mainChannel.guild.get_role(refuserNewRank))
         elif refuserNewRank != refuserRank:
-            await refuser.remove_roles(self.mainChannel.guild.get_role(RANKS[refuserRank]))
-            await refuser.add_roles(self.mainChannel.guild.get_role(RANKS[refuserNewRank]))
+            await refuser.remove_roles(self.mainChannel.guild.get_role(refuserRank))
+            await refuser.add_roles(self.mainChannel.guild.get_role(refuserNewRank))
             await self.mainChannel.send(f"{refuser.mention} is now {refuserNewRank}!")
         
         with open(DUELS_HISTORY_FILE) as f:

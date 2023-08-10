@@ -39,7 +39,7 @@ class FriendlySnek(commands.Bot):
             intents=intents,
             activity=discord.Activity(  # 🐍
                 type=discord.ActivityType.watching,
-                name="you"
+                name="the skies"
             ),
             status="online"
         )

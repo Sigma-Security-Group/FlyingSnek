@@ -1,6 +1,7 @@
+venv/
 __pycache__
 data/
 logs/
 bot.log
 secret.py
-venv/
+constantsDev.py
