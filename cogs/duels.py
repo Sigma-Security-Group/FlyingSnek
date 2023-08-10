@@ -91,6 +91,8 @@ class DuelView(discord.ui.View):
     
     async def handleWin(self, winner: discord.Member, loser: discord.Member) -> None:
         log.debug(f"{winner.display_name} ({winner.id}) wins against {loser.display_name} ({loser.id})")
+        await self.mainChannel.send(f"{winner.display_name} wins against {loser.display_name}")
+        
         with open(SCORES_FILE) as f:
             scores = json.load(f)
         
