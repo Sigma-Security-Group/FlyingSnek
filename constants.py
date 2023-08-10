@@ -40,7 +40,6 @@ RANKS_BY_SCORE[0] = INITIATE
 
 
 SCORES_FILE = "data/scores.json"
-DUELS_FILE = "data/duels.json"
 DUELS_HISTORY_FILE = "data/duelsHistory.json"
 
 DUELS_CATEGORY = 1139134276777021513

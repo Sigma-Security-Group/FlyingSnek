@@ -16,9 +16,6 @@ class Duels(commands.Cog):
         if not os.path.exists(SCORES_FILE):
             with open(SCORES_FILE, "w") as f:
                 json.dump({}, f)
-        if not os.path.exists(DUELS_FILE):
-            with open(DUELS_FILE, "w") as f:
-                json.dump([], f)
         if not os.path.exists(DUELS_HISTORY_FILE):
             with open(DUELS_HISTORY_FILE, "w") as f:
                 json.dump([], f)
@@ -130,6 +127,23 @@ class DuelView(discord.ui.View):
             await loser.add_roles(self.mainChannel.guild.get_role(RANKS[loserNewRank]))
             await self.mainChannel.send(f"{loser.mention} is now {loserNewRank}!")
         
+        with open(DUELS_HISTORY_FILE) as f:
+            history = json.load(f)
+        
+        history.append({
+            "challenger": self.challenger.id,
+            "challengerName": self.challenger.display_name,
+            "opponent": self.opponent.id,
+            "opponentName": self.opponent.display_name,
+            "accepted": True,
+            "winner": winner.id,
+            "pointsWon": pointsWon,
+            "timestamp": datetime.now(timezone.utc).isoformat()
+        })
+        
+        with open(DUELS_HISTORY_FILE, "w") as f:
+            json.dump(history, f, indent=4)
+        
         await self.channel.delete()
     
     async def handleRefusal(self, refuser: discord.Member) -> None:
@@ -155,6 +169,23 @@ class DuelView(discord.ui.View):
             await refuser.remove_roles(self.mainChannel.guild.get_role(RANKS[refuserRank]))
             await refuser.add_roles(self.mainChannel.guild.get_role(RANKS[refuserNewRank]))
             await self.mainChannel.send(f"{refuser.mention} is now {refuserNewRank}!")
+        
+        with open(DUELS_HISTORY_FILE) as f:
+            history = json.load(f)
+        
+        history.append({
+            "challenger": self.challenger.id,
+            "challengerName": self.challenger.display_name,
+            "opponent": self.opponent.id,
+            "opponentName": self.opponent.display_name,
+            "accepted": False,
+            "winner": self.challenger.id if self.opponent.id == refuser.id else self.opponent.id if self.challenger.id == refuser.id else None,
+            "pointsWon": 0,
+            "timestamp": datetime.now(timezone.utc).isoformat()
+        })
+        
+        with open(DUELS_HISTORY_FILE, "w") as f:
+            json.dump(history, f, indent=4)
         
         await self.channel.delete()
 
