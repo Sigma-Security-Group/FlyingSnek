@@ -91,7 +91,7 @@ class DuelView(discord.ui.View):
     
     async def handleWin(self, winner: discord.Member, loser: discord.Member) -> None:
         log.debug(f"{winner.display_name} ({winner.id}) wins against {loser.display_name} ({loser.id})")
-        await self.mainChannel.send(f"{winner.display_name} wins against {loser.display_name}")
+        await self.mainChannel.send(f"{winner.mention} wins against {loser.mention}")
         
         with open(SCORES_FILE) as f:
             scores = json.load(f)
@@ -121,14 +121,14 @@ class DuelView(discord.ui.View):
         elif winnerNewRank != winnerRank:
             await winner.remove_roles(self.mainChannel.guild.get_role(winnerRank))
             await winner.add_roles(self.mainChannel.guild.get_role(winnerNewRank))
-            await self.mainChannel.send(f"{winner.mention} is now {self.mainChannel.guild.get_role(winnerNewRank).mention}!")
+            await self.mainChannel.send(f"{winner.mention} is now {self.mainChannel.guild.get_role(winnerNewRank).name}!")
         
         if loserNewRank == loserRank == INITIATE:
             await loser.add_roles(self.mainChannel.guild.get_role(loserNewRank))
         elif loserNewRank != loserRank:
             await loser.remove_roles(self.mainChannel.guild.get_role(loserRank))
             await loser.add_roles(self.mainChannel.guild.get_role(loserNewRank))
-            await self.mainChannel.send(f"{loser.mention} is now {self.mainChannel.guild.get_role(loserNewRank).mention}!")
+            await self.mainChannel.send(f"{loser.mention} is now {self.mainChannel.guild.get_role(loserNewRank).name}!")
         
         with open(DUELS_HISTORY_FILE) as f:
             history = json.load(f)
@@ -171,7 +171,7 @@ class DuelView(discord.ui.View):
         elif refuserNewRank != refuserRank:
             await refuser.remove_roles(self.mainChannel.guild.get_role(refuserRank))
             await refuser.add_roles(self.mainChannel.guild.get_role(refuserNewRank))
-            await self.mainChannel.send(f"{refuser.mention} is now {self.mainChannel.guild.get_role(refuserNewRank).mention}!")
+            await self.mainChannel.send(f"{refuser.mention} is now {self.mainChannel.guild.get_role(refuserNewRank).name}!")
         
         with open(DUELS_HISTORY_FILE) as f:
             history = json.load(f)
