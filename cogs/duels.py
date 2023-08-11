@@ -43,13 +43,13 @@ class Duels(commands.Cog):
 
         guild = interaction.guild
         overwrites = {
-            guild.default_role: discord.PermissionOverwrite(read_messages=False),
-            guild.me: discord.PermissionOverwrite(read_messages=True, send_messages=True),
-            challenger: discord.PermissionOverwrite(read_messages=True, send_messages=True),
-            opponent: discord.PermissionOverwrite(read_messages=True, send_messages=True),
-            guild.get_role(SQUADRON_LEADER): discord.PermissionOverwrite(read_messages=True, send_messages=True),
-            guild.get_role(UNIT_STAFF): discord.PermissionOverwrite(read_messages=True, send_messages=True),
-            guild.get_role(SNEK_LORD): discord.PermissionOverwrite(read_messages=True, send_messages=True),
+            guild.default_role: discord.PermissionOverwrite(read_messages=False, view_channel=False),
+            guild.me: discord.PermissionOverwrite(read_messages=True, send_messages=True, use_application_commands=True, view_channel=True),
+            challenger: discord.PermissionOverwrite(read_messages=True, send_messages=True, use_application_commands=True, view_channel=True),
+            opponent: discord.PermissionOverwrite(read_messages=True, send_messages=True, use_application_commands=True, view_channel=True),
+            guild.get_role(SQUADRON_LEADER): discord.PermissionOverwrite(read_messages=True, send_messages=True, use_application_commands=True, view_channel=True),
+            guild.get_role(UNIT_STAFF): discord.PermissionOverwrite(read_messages=True, send_messages=True, use_application_commands=True, view_channel=True),
+            guild.get_role(SNEK_LORD): discord.PermissionOverwrite(read_messages=True, send_messages=True, use_application_commands=True, view_channel=True),
         }
         channelName = f"{challenger.display_name} vs {opponent.display_name} - {datetime.now(timezone.utc).strftime('%Y-%m-%d @ %H:%M:%S')}"
         channel = await interaction.guild.create_text_channel(channelName, category=self.bot.get_channel(DUELS_CATEGORY), overwrites=overwrites)
