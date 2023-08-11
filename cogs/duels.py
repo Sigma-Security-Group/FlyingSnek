@@ -89,6 +89,15 @@ class DuelView(discord.ui.View):
         await interaction.response.send_message("Challenge refused!", ephemeral=True)
         await self.handleRefusal(interaction.user)
     
+    @discord.ui.button(label="Cancel challenge (only for legitimate use, no score change)", style=discord.ButtonStyle.blurple)
+    async def challengeCancelled(self, interaction: discord.Interaction, button: discord.ui.Button) -> None:
+        await interaction.response.send_message("Challenge cancelled!", ephemeral=True)
+        
+        log.debug(f"Challenge cancelled by {interaction.user.display_name} ({interaction.user.id})")
+        await self.mainChannel.send(f"{interaction.user.mention} cancelled a challenge")
+        
+        await self.channel.delete()
+    
     async def handleWin(self, winner: discord.Member, loser: discord.Member) -> None:
         log.debug(f"{winner.display_name} ({winner.id}) wins against {loser.display_name} ({loser.id})")
         await self.mainChannel.send(f"{winner.mention} wins against {loser.mention}")
@@ -151,6 +160,7 @@ class DuelView(discord.ui.View):
     
     async def handleRefusal(self, refuser: discord.Member) -> None:
         log.debug(f"Challenge refused by {refuser.display_name} ({refuser.id})")
+        await self.mainChannel.send(f"{refuser.mention} refused a challenge")
         with open(SCORES_FILE) as f:
             scores = json.load(f)
         
