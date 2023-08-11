@@ -24,6 +24,11 @@ class Duels(commands.Cog):
     async def on_ready(self) -> None:
         log.debug("Cog ready: Duels", flush=True)
         cogsReady["duels"] = True
+        
+        channels = self.bot.get_guild(GUILD).channels
+        for channel in channels:
+            if channel.name.startswith("σad--aratam-vs-") or channel.name.startswith("322nd-sqdn--aspire-vs-"):
+                await channel.delete()
 
     @app_commands.command(name="challenge", description="Challenge a user to a duel")
     @app_commands.guilds(GUILD)
