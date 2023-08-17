@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import os, json
 from datetime import datetime, timezone
 
@@ -7,7 +9,7 @@ from discord.ext import commands  # type: ignore
 
 from constants import *
 
-from __main__ import log, cogsReady
+from __main__ import log, cogsReady, client
 
 
 class Duels(commands.Cog):
@@ -54,53 +56,49 @@ class Duels(commands.Cog):
         channelName = f"{challenger.display_name} vs {opponent.display_name} - {datetime.now(timezone.utc).strftime('%Y-%m-%d @ %H:%M:%S')}"
         channel = await interaction.guild.create_text_channel(channelName, category=self.bot.get_channel(DUELS_CATEGORY), overwrites=overwrites)
         
-        view = DuelView()
-        view.challengerWins.label = f"{challenger.display_name} Wins"
-        view.challenger = challenger
-        view.opponentWins.label = f"{opponent.display_name} Wins"
-        view.opponent = opponent
-        view.mainChannel = interaction.channel
-        view.channel = channel
+        view = discord.ui.View()
+        
+        view.add_item(DuelButton(label=f"{challenger.display_name} Wins", style=discord.ButtonStyle.green, custom_id=f"duelWin_{channel.id}_{challenger.id}_{opponent.id}_challenger"))
+        view.add_item(DuelButton(label=f"{opponent.display_name} Wins", style=discord.ButtonStyle.green, custom_id=f"duelWin_{channel.id}_{challenger.id}_{opponent.id}_opponent"))
+        view.add_item(DuelButton(label="Refuse challenge (-2pts)", style=discord.ButtonStyle.red, custom_id=f"duelRefused_{channel.id}_{challenger.id}_{opponent.id}_none"))
+        view.add_item(DuelButton(label="Cancel challenge (only for legitimate use, no score change)", style=discord.ButtonStyle.blurple, custom_id=f"duelCancelled_{channel.id}_{challenger.id}_{opponent.id}_none"))
+        
         await channel.send(view=view)
-        await channel.send(f"{challenger.mention} vs {opponent.mention}")
+        # await channel.send(f"{challenger.mention} vs {opponent.mention}")
         
         log.debug(f"Duel created: {challenger.display_name} ({challenger.id}) vs {opponent.display_name} ({opponent.id})")
         await interaction.response.send_message(f"Duel created: {channel.jump_url}")
-
-
-class DuelView(discord.ui.View):
-    mainChannel: discord.TextChannel = None
-    channel: discord.TextChannel = None
-    challenger: discord.Member = None
-    opponent: discord.Member = None
     
-    @discord.ui.button(label="Challenger Wins", style=discord.ButtonStyle.green)
-    async def challengerWins(self, interaction: discord.Interaction, button: discord.ui.Button) -> None:
-        await interaction.response.send_message(f"{self.challenger.display_name} wins!", ephemeral=True)
-        await self.handleWin(self.challenger, self.opponent)
+async def buttonHandling(button: DuelButton, interaction: discord.Interaction) -> None:
+    # sourcery skip: low-code-quality
+    if not isinstance(interaction.user, discord.Member):
+        log.exception("ButtonHandling: user not discord.Member")
+        return
     
-    @discord.ui.button(label="Opponent Wins", style=discord.ButtonStyle.green)
-    async def opponentWins(self, interaction: discord.Interaction, button: discord.ui.Button) -> None:
-        await interaction.response.send_message(f"{self.opponent.display_name} wins!", ephemeral=True)
-        await self.handleWin(self.opponent, self.challenger)
+    try:
+        action, channelId, challengerId, opponentId, winnerLbl = button.custom_id.split("_")
+    except Exception:
+        log.exception("ButtonHandling: invalid custom_id")
+        return
     
-    @discord.ui.button(label="Refuse challenge (-2pts)", style=discord.ButtonStyle.red)
-    async def challengeRefused(self, interaction: discord.Interaction, button: discord.ui.Button) -> None:
-        await interaction.response.send_message("Challenge refused!", ephemeral=True)
-        await self.handleRefusal(interaction.user)
+    mainChannel = client.get_channel(THE_CHALLENGE_ROOM)
+    channel = client.get_channel(int(channelId))
+    challenger = channel.guild.get_member(int(challengerId))
+    opponent = channel.guild.get_member(int(opponentId))
+    if winnerLbl == "challenger":
+        winner = challenger
+        loser = opponent
+    elif winnerLbl == "opponent":
+        winner = opponent
+        loser = challenger
+    else:
+        winner = None
+        loser = None
     
-    @discord.ui.button(label="Cancel challenge (only for legitimate use, no score change)", style=discord.ButtonStyle.blurple)
-    async def challengeCancelled(self, interaction: discord.Interaction, button: discord.ui.Button) -> None:
-        await interaction.response.send_message("Challenge cancelled!", ephemeral=True)
-        
-        log.debug(f"Challenge cancelled by {interaction.user.display_name} ({interaction.user.id})")
-        await self.mainChannel.send(f"{interaction.user.mention} cancelled a challenge")
-        
-        await self.channel.delete()
-    
-    async def handleWin(self, winner: discord.Member, loser: discord.Member) -> None:
+    if action == "duelWin":
+        await channel.send(f"{winner.display_name} wins!")
         log.debug(f"{winner.display_name} ({winner.id}) wins against {loser.display_name} ({loser.id})")
-        await self.mainChannel.send(f"{winner.mention} wins against {loser.mention}")
+        await mainChannel.send(f"{winner.mention} wins against {loser.mention}")
         
         with open(SCORES_FILE) as f:
             scores = json.load(f)
@@ -126,27 +124,27 @@ class DuelView(discord.ui.View):
             json.dump(scores, f, indent=4)
         
         if winnerNewRank == winnerRank == INITIATE:
-            await winner.add_roles(self.mainChannel.guild.get_role(winnerNewRank))
+            await winner.add_roles(mainChannel.guild.get_role(winnerNewRank))
         elif winnerNewRank != winnerRank:
-            await winner.remove_roles(self.mainChannel.guild.get_role(winnerRank))
-            await winner.add_roles(self.mainChannel.guild.get_role(winnerNewRank))
-            await self.mainChannel.send(f"{winner.mention} is now {self.mainChannel.guild.get_role(winnerNewRank).name}!")
+            await winner.remove_roles(mainChannel.guild.get_role(winnerRank))
+            await winner.add_roles(mainChannel.guild.get_role(winnerNewRank))
+            await mainChannel.send(f"{winner.mention} is now {mainChannel.guild.get_role(winnerNewRank).name}!")
         
         if loserNewRank == loserRank == INITIATE:
-            await loser.add_roles(self.mainChannel.guild.get_role(loserNewRank))
+            await loser.add_roles(mainChannel.guild.get_role(loserNewRank))
         elif loserNewRank != loserRank:
-            await loser.remove_roles(self.mainChannel.guild.get_role(loserRank))
-            await loser.add_roles(self.mainChannel.guild.get_role(loserNewRank))
-            await self.mainChannel.send(f"{loser.mention} is now {self.mainChannel.guild.get_role(loserNewRank).name}!")
+            await loser.remove_roles(mainChannel.guild.get_role(loserRank))
+            await loser.add_roles(mainChannel.guild.get_role(loserNewRank))
+            await mainChannel.send(f"{loser.mention} is now {mainChannel.guild.get_role(loserNewRank).name}!")
         
         with open(DUELS_HISTORY_FILE) as f:
             history = json.load(f)
         
         history.append({
-            "challenger": self.challenger.id,
-            "challengerName": self.challenger.display_name,
-            "opponent": self.opponent.id,
-            "opponentName": self.opponent.display_name,
+            "challenger": challenger.id,
+            "challengerName": challenger.display_name,
+            "opponent": opponent.id,
+            "opponentName": opponent.display_name,
             "accepted": True,
             "winner": winner.id,
             "pointsWon": pointsWon,
@@ -156,43 +154,44 @@ class DuelView(discord.ui.View):
         with open(DUELS_HISTORY_FILE, "w") as f:
             json.dump(history, f, indent=4)
         
-        await self.channel.delete()
+        await channel.delete()
     
-    async def handleRefusal(self, refuser: discord.Member) -> None:
-        log.debug(f"Challenge refused by {refuser.display_name} ({refuser.id})")
-        await self.mainChannel.send(f"{refuser.mention} refused a challenge")
+    elif action == "duelRefused":
+        await channel.send("Challenge refused!")
+        log.debug(f"Challenge refused by {interaction.user.display_name} ({interaction.user.id})")
+        await mainChannel.send(f"{interaction.user.mention} refused a challenge")
         with open(SCORES_FILE) as f:
             scores = json.load(f)
         
-        if str(refuser.id) not in scores:
-            scores[str(refuser.id)] = 0
+        if str(interaction.user.id) not in scores:
+            scores[str(interaction.user.id)] = 0
         
-        refuserRank = RANKS_BY_SCORE[scores[str(refuser.id)]]
+        refuserRank = RANKS_BY_SCORE[scores[str(interaction.user.id)]]
         
-        scores[str(refuser.id)] = max(scores[str(refuser.id)] - 2, 0)
+        scores[str(interaction.user.id)] = max(scores[str(interaction.user.id)] - 2, 0)
         
-        refuserNewRank = RANKS_BY_SCORE[scores[str(refuser.id)]]
+        refuserNewRank = RANKS_BY_SCORE[scores[str(interaction.user.id)]]
         
         with open(SCORES_FILE, "w") as f:
             json.dump(scores, f, indent=4)
         
         if refuserNewRank == refuserRank == INITIATE:
-            await refuser.add_roles(self.mainChannel.guild.get_role(refuserNewRank))
+            await interaction.user.add_roles(mainChannel.guild.get_role(refuserNewRank))
         elif refuserNewRank != refuserRank:
-            await refuser.remove_roles(self.mainChannel.guild.get_role(refuserRank))
-            await refuser.add_roles(self.mainChannel.guild.get_role(refuserNewRank))
-            await self.mainChannel.send(f"{refuser.mention} is now {self.mainChannel.guild.get_role(refuserNewRank).name}!")
+            await interaction.user.remove_roles(mainChannel.guild.get_role(refuserRank))
+            await interaction.user.add_roles(mainChannel.guild.get_role(refuserNewRank))
+            await mainChannel.send(f"{interaction.user.mention} is now {mainChannel.guild.get_role(refuserNewRank).name}!")
         
         with open(DUELS_HISTORY_FILE) as f:
             history = json.load(f)
         
         history.append({
-            "challenger": self.challenger.id,
-            "challengerName": self.challenger.display_name,
-            "opponent": self.opponent.id,
-            "opponentName": self.opponent.display_name,
+            "challenger": challenger.id,
+            "challengerName": challenger.display_name,
+            "opponent": opponent.id,
+            "opponentName": opponent.display_name,
             "accepted": False,
-            "winner": self.challenger.id if self.opponent.id == refuser.id else self.opponent.id if self.challenger.id == refuser.id else None,
+            "winner": challenger.id if opponent.id == interaction.user.id else opponent.id if challenger.id == interaction.user.id else None,
             "pointsWon": 0,
             "timestamp": datetime.now(timezone.utc).isoformat()
         })
@@ -200,7 +199,23 @@ class DuelView(discord.ui.View):
         with open(DUELS_HISTORY_FILE, "w") as f:
             json.dump(history, f, indent=4)
         
-        await self.channel.delete()
+        await channel.delete()
+    
+    elif action == "duelCancelled":
+        await channel.send("Challenge cancelled!")
+        log.debug(f"Challenge cancelled by {interaction.user.display_name} ({interaction.user.id})")
+        await mainChannel.send(f"{interaction.user.mention} cancelled a challenge")
+        
+        await channel.delete()
+
+
+class DuelButton(discord.ui.Button):
+    """Handling all duel buttons."""
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    async def callback(self, interaction: discord.Interaction):
+        await buttonHandling(self, interaction)
 
 
 async def setup(bot: commands.Bot) -> None:

@@ -60,6 +60,14 @@ async def on_ready() -> None:
     client.ready = True
 
     log.info(f"Bot Ready! Logged in as {client.user}.")
+    
+    ########################################################################################
+    # For deleting all duel channels                                                       #
+    # /!\ Only uncomment this if you know what you're doing                                #
+    for channel in GUILD.channels:                                                         #
+        if channel.category_id == DUELS_CATEGORY.id and channel.id != THE_CHALLENGE_ROOM:  #
+            await log.debug(f"Deleting channel {channel.name} ({channel.id})")             #
+    ########################################################################################
 
 
 @client.event
