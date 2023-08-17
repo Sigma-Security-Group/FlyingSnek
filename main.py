@@ -67,6 +67,7 @@ async def on_ready() -> None:
     for channel in client.get_guild(GUILD_ID).channels:                                 #
         if channel.category_id == DUELS_CATEGORY and channel.id != THE_CHALLENGE_ROOM:  #
             log.debug(f"Deleting channel {channel.name} ({channel.id})")                #
+            await channel.delete()                                                      #
     #####################################################################################
 
 
