@@ -64,7 +64,7 @@ class Duels(commands.Cog):
         view.add_item(DuelButton(self, label="Cancel challenge (only for legitimate use, no score change)", style=discord.ButtonStyle.blurple, custom_id=f"duelCancelled_{channel.id}_{challenger.id}_{opponent.id}_none"))
         
         await channel.send(view=view)
-        if not skipMentions:
+        if not skip_mentions:
             await channel.send(f"{challenger.mention} vs {opponent.mention}")
         
         log.debug(f"Duel created: {challenger.display_name} ({challenger.id}) vs {opponent.display_name} ({opponent.id})")
