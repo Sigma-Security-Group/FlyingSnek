@@ -33,7 +33,7 @@ class Duels(commands.Cog):
         opponent="Opponent to challenge to a duel",
         challenger="Challenger to challenge the opponent to a duel (defaults to the user who invoked the command)"
     )
-    async def challenge(self, interaction: discord.Interaction, opponent: discord.Member, challenger: discord.Member = None, skipMentions: bool = False) -> None:
+    async def challenge(self, interaction: discord.Interaction, opponent: discord.Member, challenger: discord.Member = None, skip_mentions: bool = False) -> None:
         """Challenge a user to a duel"""
         if interaction.channel.id != THE_CHALLENGE_ROOM:
             channel = self.bot.get_channel(THE_CHALLENGE_ROOM)
